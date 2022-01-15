@@ -215,6 +215,20 @@ func DataSourceDomain() *schema.Resource {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
+						"cold_storage_options": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:     schema.TypeBool,
+										Optional: true,
+										Default:  false,
+									},
+								},
+							},
+						},
 					},
 				},
 			},

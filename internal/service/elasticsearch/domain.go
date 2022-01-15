@@ -382,6 +382,20 @@ func ResourceDomain() *schema.Resource {
 								"ultrawarm1.xlarge.elasticsearch",
 							}, false),
 						},
+						"cold_storage_options": {
+							Type:             schema.TypeList,
+							Optional:         true,
+							MaxItems:         1,
+							DiffSuppressFunc: verify.SuppressMissingOptionalConfigurationBlock,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:     schema.TypeBool,
+										Required: true,
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -1093,6 +1107,10 @@ func expandClusterConfig(m map[string]interface{}) *elasticsearch.ElasticsearchC
 		}
 	}
 
+	if v, ok := m["cold_storage_options"]; ok {
+		config.ColdStorageOptions = expandColdStorageOptionsConfig(v.([]interface{}))
+	}
+
 	return &config
 }
 
@@ -1112,10 +1130,27 @@ func expandZoneAwarenessConfig(l []interface{}) *elasticsearch.ZoneAwarenessConf
 	return zoneAwarenessConfig
 }
 
+func expandColdStorageOptionsConfig(l []interface{}) *elasticsearch.ColdStorageOptions {
+	if len(l) == 0 || l[0] == nil {
+		return nil
+	}
+
+	m := l[0].(map[string]interface{})
+
+	coldStorageOptions := &elasticsearch.ColdStorageOptions{}
+
+	if v, ok := m["enabled"]; ok {
+		coldStorageOptions.Enabled = aws.Bool(v.(bool))
+	}
+
+	return coldStorageOptions
+}
+
 func flattenClusterConfig(c *elasticsearch.ElasticsearchClusterConfig) []map[string]interface{} {
 	m := map[string]interface{}{
 		"zone_awareness_config":  flattenZoneAwarenessConfig(c.ZoneAwarenessConfig),
 		"zone_awareness_enabled": aws.BoolValue(c.ZoneAwarenessEnabled),
+		"cold_storage_options":   flattenColdStorageOptions(c.ColdStorageOptions),
 	}
 
 	if c.DedicatedMasterCount != nil {
@@ -1153,6 +1188,18 @@ func flattenZoneAwarenessConfig(zoneAwarenessConfig *elasticsearch.ZoneAwareness
 
 	m := map[string]interface{}{
 		"availability_zone_count": aws.Int64Value(zoneAwarenessConfig.AvailabilityZoneCount),
+	}
+
+	return []interface{}{m}
+}
+
+func flattenColdStorageOptions(coldStorageOptions *elasticsearch.ColdStorageOptions) []interface{} {
+	if coldStorageOptions == nil {
+		return []interface{}{}
+	}
+
+	m := map[string]interface{}{
+		"enabled": aws.BoolValue(coldStorageOptions.Enabled),
 	}
 
 	return []interface{}{m}
